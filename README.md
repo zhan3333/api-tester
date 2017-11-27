@@ -1,4 +1,4 @@
-API tester for laravel-admin
+API tester for laravel-admin and dingo api
 ============================
 
 [![StyleCI](https://styleci.io/repos/99563385/shield?branch=master)](https://styleci.io/repos/99563385)
@@ -43,9 +43,6 @@ Finally open `http://localhost/admin/api-tester`.
             // route prefix for APIs
             'prefix' => 'api',
 
-            // auth guard for api
-            'guard'  => 'api',
-
             // If you are not using the default user model as the authentication model, set it up
             'user_retriever' => function ($id) {
                 return \App\User::find($id);
@@ -53,6 +50,14 @@ Finally open `http://localhost/admin/api-tester`.
         ]
     ]
 
+```
+
+## Document use
+use Dingo api doc: https://github.com/dingo/api/wiki/API-Blueprint-Documentation
+```php
+ * @Parameters({
+ *      @Parameter("contract_file_id", description="文件id")
+ * })
 ```
 
 License

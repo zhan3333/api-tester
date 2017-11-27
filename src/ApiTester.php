@@ -2,6 +2,7 @@
 
 namespace Encore\Admin\ApiTester;
 
+use Dingo\Api\Auth\Auth;
 use Encore\Admin\Extension;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -54,8 +55,6 @@ class ApiTester extends Extension
      */
     public function call($method, $uri, $parameters = [], $user = null)
     {
-//        ApiLogger::log(...func_get_args());
-
         if ($user) {
             $this->loginUsing($user);
         }
@@ -98,15 +97,7 @@ class ApiTester extends Extension
      */
     protected function loginUsing($userId)
     {
-        $guard = static::config('guard', 'api');
-
-        if ($method = static::config('user_retriever')) {
-            $user = call_user_func($method, $userId);
-        } else {
-            $user = app('auth')->guard($guard)->getProvider()->retrieveById($userId);
-        }
-
-        $this->app['auth']->guard($guard)->setUser($user);
+        app(Auth::class)->setUser(config('admin.extensions.api-tester.user_retriever')($userId));
     }
 
     /**
@@ -121,7 +112,7 @@ class ApiTester extends Extension
         $jsoned = json_decode($content);
 
         if (json_last_error() == JSON_ERROR_NONE) {
-            $content = json_encode($jsoned, JSON_PRETTY_PRINT);
+            $content = json_encode($jsoned, JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT);
         }
 
         $lang = 'json';
@@ -245,7 +236,7 @@ class ApiTester extends Extension
 
         $routes = collect($routes)->filter()->map(function ($route) {
             $route['parameters'] = json_encode($this->getRouteParameters($route['action']));
-
+            $route['docComment'] = $this->getRouteDocComment($route['action']);
             unset($route['middleware'], $route['host'], $route['name'], $route['action']);
 
             return $route;
@@ -255,13 +246,11 @@ class ApiTester extends Extension
     }
 
     /**
-     * Get parameters info of route.
-     *
+     * Get DocComment of route
      * @param $action
-     *
-     * @return array
+     * @return array|string
      */
-    protected function getRouteParameters($action)
+    protected function getRouteDocComment($action)
     {
         if (is_callable($action) || $action === 'Closure') {
             return [];
@@ -275,22 +264,43 @@ class ApiTester extends Extension
 
         $classReflector = new \ReflectionClass($class);
 
-        $comment = $classReflector->getMethod($method)->getDocComment();
+        return $classReflector->getMethod($method)->getDocComment();
+    }
+
+    /**
+     * Get parameters info of route.
+     *
+     * @param $action
+     *
+     * @return array
+     */
+    protected function getRouteParameters($action)
+    {
+        $comment = $this->getRouteDocComment($action);
 
         if ($comment) {
             $parameters = [];
-            preg_match_all('/\@SWG\\\Parameter\(\n(.*?)\)\n/s', $comment, $matches);
+            preg_match_all('/\@Parameter\((.*?)\)/s', $comment, $matches);
             foreach (array_get($matches, 1, []) as $item) {
-                preg_match_all('/(\w+)=[\'"]?([^\r\n"]+)[\'"]?,?\n/s', $item, $match);
-                if (count($match) == 3) {
-                    $match[2] = array_map(function ($val) {
-                        return trim($val, ',');
-                    }, $match[2]);
+                $str_arr = explode(',', $item);
+                $str_arr = array_map(function ($str) {
+                    return trim($str);
+                }, $str_arr);
 
-                    $parameters[] = array_combine($match[1], $match[2]);
-                }
+                $ret_arr['name'] = substr($str_arr[0], 1, (strlen($str_arr[0]) - 2));
+                unset($str_arr[0]);
+                array_map(function ($str) use (&$ret_arr) {
+                    $temp = explode('=', $str);
+                    if (isset($temp[1])) {
+                        if (false === strpos($temp[1], '"')) {
+                            $ret_arr[$temp[0]] = $temp[1];
+                        } else {
+                            $ret_arr[$temp[0]] = substr($temp[1], 1, (strlen($temp[1]) - 2));
+                        }
+                    }
+                }, $str_arr);
+                $parameters[] = $ret_arr;
             }
-
             return $parameters;
         }
 
@@ -314,11 +324,11 @@ class ApiTester extends Extension
     /**
      * Get the route information for a given route.
      *
-     * @param \Illuminate\Routing\Route $route
+     * @param \Dingo\Api\Routing\Route $route
      *
      * @return array
      */
-    protected function getRouteInformation($route)
+    protected function getRouteInformation(\Dingo\Api\Routing\Route $route)
     {
         return [
             'host'       => $route->domain(),

@@ -22,6 +22,8 @@
 
             var li = $(this).parent('li');
 
+            console.log(li.data('doc-comment'))
+
             $('a.method').html(li.data('method')).removeClass(function (index, className) {
                 return (className.match(/bg-[^\s]+/) || []).join(' ');
             }).addClass('bg-'+li.data('method-color'));
@@ -211,6 +213,7 @@
                             data-uri="{{ $route['uri'] }}"
                             data-method="{{ $route['method'] }}"
                             data-method-color="{{$color}}"
+                            data-doc-comment="{{ $route['docComment'] }}"
                             data-parameters='{!! $route['parameters'] !!}' >
 
                             <a href="#"><b>{{ $route['uri'] }}</b>

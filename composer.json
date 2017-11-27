@@ -1,5 +1,5 @@
 {
-    "name": "laravel-admin-ext/api-tester",
+    "name": "zhan3333/api-tester",
     "description": "Api tester for laravel and dingo api",
     "type": "library",
     "keywords": ["laravel-admin", "api", "tester", "dingo"],

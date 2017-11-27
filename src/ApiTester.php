@@ -214,12 +214,27 @@ class ApiTester extends Extension
      */
     public function getRoutes()
     {
-        $routes = app('router')->getRoutes();
+        if (class_exists('\Dingo\Api\Facade\Route')) {
+            /**
+             * @var $routeObj RouteCollection
+             *
+             */
+            $routeObj = \Dingo\Api\Facade\Route::getRoutes(config('api.version'));
+            $routes = $routeObj->getRoutes();
 
-        $prefix = static::config('prefix');
+            $prefix = '/' . static::config('prefix');
+        } else {
+            $routes = app('router')->getRoutes();
+            $prefix = static::config('prefix');
+        }
+
+
 
         $routes = collect($routes)->filter(function ($route) use ($prefix) {
-            return Str::startsWith($route->uri, static::config('prefix'));
+            /**
+             * @var $route \Dingo\Api\Routing\Route
+             */
+            return Str::startsWith($route->uri(), $prefix);
         })->map(function ($route) {
             return $this->getRouteInformation($route);
         })->all();
@@ -311,7 +326,7 @@ class ApiTester extends Extension
             'uri'        => $route->uri(),
             'name'       => $route->getName(),
             'action'     => $route->getActionName(),
-            'middleware' => $this->getRouteMiddleware($route),
+//            'middleware' => $this->getRouteMiddleware($route),
         ];
     }
 

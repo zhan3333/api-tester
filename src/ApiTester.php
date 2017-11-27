@@ -318,7 +318,7 @@ class ApiTester extends Extension
      *
      * @return array
      */
-    protected function getRouteInformation(Route $route)
+    protected function getRouteInformation($route)
     {
         return [
             'host'       => $route->domain(),
